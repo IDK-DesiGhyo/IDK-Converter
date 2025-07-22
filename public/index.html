@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal File Processor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 40px;
+            font-size: 2.5em;
+            font-weight: 700;
+        }
+        
+        .upload-zone {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 60px 40px;
+            text-align: center;
+            margin-bottom: 40px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .upload-zone::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+            transition: left 0.5s;
+        }
+        
+        .upload-zone:hover::before {
+            left: 100%;
+        }
+        
+        .upload-zone:hover {
+            border-color: #4f46e5;
+            background: rgba(102, 126, 234, 0.05);
+            transform: translateY(-2px);
+        }
+        
+        .upload-zone.dragover {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+            transform: scale(1.02);
+        }
+        
+        .upload-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            opacity: 0.7;
+        }
+        
+        .upload-text {
+            font-size: 1.2em;
+            color: #555;
+            margin-bottom: 15px;
+        }
+        
+        .file-types {
+            color: #888;
+            font-size: 0.9em;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .file-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .file-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: transform 0.2s ease;
+        }
+        
+        .file-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .file-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            word-break: break-word;
+        }
+        
+        .file-info {
+            color: #666;
+            font-size: 0.85em;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .control-group {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+        
+        .control-group h3 {
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 12px;
+            font-weight: 500;
+            color: #444;
+        }
+        
+        select, input[type="number"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: #667eea;
+        }
+        
+        .compression-controls {
+            display: none;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e1e5e9;
+        }
+        
+        .compression-controls.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .size-input-group {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .size-input-group input {
+            flex: 2;
+        }
+        
+        .size-input-group select {
+            flex: 1;
+        }
+        
+        .process-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .process-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .process-btn:hover::before {
+            left: 100%;
+        }
+        
+        .process-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+        }
+        
+        .process-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .progress-container {
+            display: none;
+            margin-top: 30px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+        
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .result-panel {
+            display: none;
+            margin-top: 30px;
+            padding: 25px;
+            border-radius: 15px;
+            animation: slideUp 0.5s ease;
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .result-panel.success {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border: 2px solid #34d399;
+            color: #065f46;
+        }
+        
+        .result-panel.error {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border: 2px solid #f87171;
+            color: #991b1b;
+        }
+        
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+            padding: 12px 24px;
+            background: #059669;
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .download-btn:hover {
+            background: #047857;
+            transform: translateY(-2px);
+        }
+        
+        .status-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 500;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        .status-indicator.online {
+            background: #d1fae5;
+            color: #065f46;
+            border: 2px solid #34d399;
+        }
+        
+        .status-indicator.offline {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 2px solid #f87171;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                padding: 20px;
+            }
+            
+            .controls {
+                grid-template-columns: 1fr;
+            }
+            
+            .file-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="status-indicator" id="statusIndicator">🔄 Checking connection...</div>
+    
+    <div class="container">
+        <h1>🚀 Universal File Processor</h1>
+        
+        <div class="upload-zone" id="uploadZone">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">Drop your files here or click to browse</div>
+            <div class="file-types">Supports: PDF, DOCX, PPTX, Images (JPG, PNG, GIF, BMP, WEBP)</div>
+            <input type="file" id="fileInput" multiple accept=".pdf,.docx,.doc,.pptx,.ppt,.jpg,.jpeg,.png,.gif,.bmp,.webp">
+        </div>
+        
+        <div class="file-grid" id="fileGrid"></div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <h3>📋 Output Format</h3>
+                <label for="outputFormat">Choose output format:</label>
+                <select id="outputFormat">
+                    <option value="pdf">📄 PDF (Merge/Convert)</option>
+                    <option value="docx">📝 DOCX (Merge Documents)</option>
+                    <option value="collage">🖼️ Image Collage</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <h3>🗜️ Compression</h3>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="enableCompression">
+                    <label for="enableCompression">Enable file compression</label>
+                </div>
+                <div class="compression-controls" id="compressionControls">
+                    <label for="targetSize">Target file size:</label>
+                    <div class="size-input-group">
+                        <input type="number" id="targetSize" placeholder="Enter size" min="1">
+                        <select id="sizeUnit">
+                            <option value="KB">KB</option>
+                            <option value="MB">MB</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <button class="process-btn" id="processBtn" onclick="processFiles()">
+            🔄 Process Files
+        </button>
+        
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+        
+        <div class="result-panel" id="resultPanel"></div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE_URL = 'https://your-lambda-api-url.amazonaws.com/dev'; // Update this with your Lambda API URL
+        
+        let selectedFiles = [];
+        
+        // DOM elements
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileGrid = document.getElementById('fileGrid');
+        const enableCompression = document.getElementById('enableCompression');
+        const compressionControls = document.getElementById('compressionControls');
+        const processBtn = document.getElementById('processBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const resultPanel = document.getElementById('resultPanel');
+        const statusIndicator = document.getElementById('statusIndicator');
+        
+        // Event listeners
+        uploadZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFileSelection);
+        
+        // Drag and drop
+        uploadZone.addEventListener('dragover', handleDragOver);
+        uploadZone.addEventListener('dragleave', handleDragLeave);
+        uploadZone.addEventListener('drop', handleDrop);
+        
+        // Compression toggle
+        enableCompression.addEventListener('change', () => {
+            compressionControls.classList.toggle('active', enableCompression.checked);
+        });
+        
+        function handleDragOver(e) {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        }
+        
+        function handleDragLeave(e) {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+        }
+        
+        function handleDrop(e) {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files);
+            processFileList(files);
+        }
+        
+        function handleFileSelection(e) {
+            const files = Array.from(e.target.files);
+            processFileList(files);
+        }
+        
+        function processFileList(files) {
+            selectedFiles = files;
+            displayFiles(files);
+            
+            // Enable process button if files are selected
+            processBtn.disabled = files.length === 0;
+        }
+        
+        function displayFiles(files) {
+            if (files.length === 0) {
+                fileGrid.innerHTML = '';
+                return;
+            }
+            
+            fileGrid.innerHTML = files.map(file => `
+                <div class="file-card">
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-info">
+                        ${formatFileSize(file.size)} • ${file.type || 'Unknown type'}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        async function processFiles() {
+            if (selectedFiles.length === 0) {
+                showResult('Please select files first.', 'error');
+                return;
+            }
+            
+            // Show progress
+            processBtn.disabled = true;
+            processBtn.textContent = '⏳ Processing...';
+            progressContainer.style.display = 'block';
+            resultPanel.style.display = 'none';
+            
+            try {
+                // Convert files to base64 for Lambda
+                const filesData = await Promise.all(
+                    selectedFiles.map(async (file) => ({
+                        name: file.name,
+                        type: file.type,
+                        size: file.size,
+                        data: await fileToBase64(file)
+                    }))
+                );
+                
+                progressFill.style.width = '30%';
+                
+                const requestData = {
+                    files: filesData,
+                    outputFormat: document.getElementById('outputFormat').value,
+                    compression: enableCompression.checked ? {
+                        size: document.getElementById('targetSize').value,
+                        unit: document.getElementById('sizeUnit').value
+                    } : null
+                };
+                
+                progressFill.style.width = '60%';
+                
+                const response = await fetch(`${API_BASE_URL}/process-files`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                progressFill.style.width = '90%';
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                progressFill.style.width = '100%';
+                
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                    
+                    if (result.success) {
+                        showResult(`
+                            <div>✅ Files processed successfully!</div>
+                            <a href="${result.downloadUrl}" class="download-btn" download="${result.filename}">
+                                📥 Download ${result.filename}
+                            </a>
+                        `, 'success');
+                    } else {
+                        showResult(`❌ Processing failed: ${result.error}`, 'error');
+                    }
+                }, 500);
+                
+            } catch (error) {
+                progressContainer.style.display = 'none';
+                showResult(`❌ Error: ${error.message}`, 'error');
+            } finally {
+                processBtn.disabled = false;
+                processBtn.textContent = '🔄 Process Files';
+            }
+        }
+        
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = error => reject(error);
+            });
+        }
+        
+        function showResult(message, type) {
+            resultPanel.innerHTML = message;
+            resultPanel.className = `result-panel ${type}`;
+            resultPanel.style.display = 'block';
+        }
+        
+        // Check API health
+        async function checkAPIHealth() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                if (response.ok) {
+                    statusIndicator.textContent = '✅ Online';
+                    statusIndicator.className = 'status-indicator online';
+                } else {
+                    throw new Error('API not responding');
+                }
+            } catch (error) {
+                statusIndicator.textContent = '❌ Backend Offline';
+                statusIndicator.className = 'status-indicator offline';
+            }
+        }
+        
+        // Initialize
+        window.addEventListener('load', () => {
+            checkAPIHealth();
+            // Check every 30 seconds
+            setInterval(checkAPIHealth, 30000);
+        });
+    </script>
+</body>
+</html>
