@@ -2,12 +2,12 @@ services:
   - type: web
     name: pdf-image-converter-api
     env: python
+    runtime: python
+    pythonVersion: 3.10.13  # Correct way to specify Python version
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
     healthCheckPath: /
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.9.18
       - key: PORT
         generateValue: true
     disk:
