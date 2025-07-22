@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Processor - Convert & Merge Files</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .upload-section {
+            margin-bottom: 30px;
+        }
+
+        .upload-area {
+            border: 3px dashed #bdc3c7;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #e8f4fd;
+        }
+
+        .upload-area.drag-over {
+            border-color: #667eea;
+            background: #e8f4fd;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            color: #bdc3c7;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 1.2em;
+            color: #34495e;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .file-list {
+            margin: 20px 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            background: #ecf0f1;
+            padding: 10px 15px;
+            margin: 5px 0;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-icon {
+            color: #3498db;
+        }
+
+        .remove-file {
+            color: #e74c3c;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .options-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .option-group {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .option-group h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .radio-group, .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .radio-item, .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .radio-item input, .checkbox-item input {
+            cursor: pointer;
+        }
+
+        .input-group {
+            margin-top: 10px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .process-button {
+            width: 100%;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .process-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .process-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .progress-section {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #ecf0f1;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+
+        .status-message {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .download-section {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .download-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 24px;
+            background: #27ae60;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .download-button:hover {
+            background: #229954;
+            transform: translateY(-2px);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+        }
+
+        .stat-value {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .stat-label {
+            font-size: 0.8em;
+            color: #7f8c8d;
+        }
+
+        .server-config {
+            background: #e8f6f3;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .server-config h3 {
+            color: #27ae60;
+            margin-bottom: 10px;
+        }
+
+        .server-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #bdc3c7;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-file-archive"></i> File Processor</h1>
+            <p>Convert, merge, and process your files with ease</p>
+        </div>
+
+        <div class="server-config">
+            <h3><i class="fas fa-server"></i> Backend Server Configuration</h3>
+            <input 
+                type="url" 
+                id="serverUrl" 
+                class="server-input" 
+                placeholder="Enter your backend server URL (e.g., https://your-app.onrender.com)"
+                value=""
+            >
+        </div>
+
+        <div class="upload-section">
+            <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                <div class="upload-icon">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+                <div class="upload-text">Click to select files or drag and drop</div>
+                <div class="upload-subtext">Support for images, PDFs, and text files (Max: 100MB total)</div>
+            </div>
+            <input type="file" id="fileInput" multiple>
+            <div class="file-list" id="fileList"></div>
+        </div>
+
+        <div class="options-section">
+            <div class="options-grid">
+                <div class="option-group">
+                    <h3><i class="fas fa-cogs"></i> Output Format</h3>
+                    <div class="radio-group">
+                        <label class="radio-item">
+                            <input type="radio" name="outputFormat" value="pdf" checked>
+                            <span>PDF Document</span>
+                        </label>
+                        <label class="radio-item">
+                            <input type="radio" name="outputFormat" value="collage">
+                            <span>Image Collage</span>
+                        </label>
+                        <label class="radio-item">
+                            <input type="radio" name="outputFormat" value="image">
+                            <span>Convert Images</span>
+                        </label>
+                        <label class="radio-item">
+                            <input type="radio" name="outputFormat" value="zip">
+                            <span>ZIP Archive</span>
+                        </label>
+                        <label class="radio-item">
+                            <input type="radio" name="outputFormat" value="docx">
+                            <span>Text Document</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="option-group">
+                    <h3><i class="fas fa-image"></i> Image Format</h3>
+                    <div class="radio-group">
+                        <label class="radio-item">
+                            <input type="radio" name="imageFormat" value="jpeg" checked>
+                            <span>JPEG</span>
+                        </label>
+                        <label class="radio-item">
+                            <input type="radio" name="imageFormat" value="png">
+                            <span>PNG</span>
+                        </label>
+                        <label class="radio-item">
+                            <input type="radio" name="imageFormat" value="webp">
+                            <span>WebP</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="option-group">
+                    <h3><i class="fas fa-compress"></i> Compression</h3>
+                    <div class="checkbox-group">
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="enableCompression">
+                            <span>Enable Compression</span>
+                        </label>
+                    </div>
+                    <div class="input-group">
+                        <label for="compressionSize">Target Size:</label>
+                        <input type="number" id="compressionSize" value="5" min="0.1" step="0.1">
+                    </div>
+                    <div class="input-group">
+                        <label for="compressionUnit">Unit:</label>
+                        <select id="compressionUnit">
+                            <option value="MB">MB</option>
+                            <option value="KB">KB</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button class="process-button" id="processButton" onclick="processFiles()">
+            <i class="fas fa-play"></i> Process Files
+        </button>
+
+        <div class="progress-section" id="progressSection">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div id="statusMessage"></div>
+        </div>
+
+        <div class="download-section" id="downloadSection">
+            <h3><i class="fas fa-check-circle"></i> Processing Complete!</h3>
+            <div class="stats" id="statsSection"></div>
+            <div style="margin-top: 20px;">
+                <a href="#" class="download-button" id="downloadButton" download>
+                    <i class="fas fa-download"></i> Download File
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFiles = [];
+        let serverUrl = '';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.getElementById('fileInput');
+            const uploadArea = document.querySelector('.upload-area');
+            const serverUrlInput = document.getElementById('serverUrl');
+
+            // Load saved server URL
+            const savedUrl = localStorage.getItem('fileProcessorServerUrl');
+            if (savedUrl) {
+                serverUrlInput.value = savedUrl;
+                serverUrl = savedUrl;
+            }
+
+            // Save server URL on change
+            serverUrlInput.addEventListener('input', function() {
+                serverUrl = this.value.trim();
+                localStorage.setItem('fileProcessorServerUrl', serverUrl);
+            });
+
+            // File input change
+            fileInput.addEventListener('change', handleFileSelect);
+
+            // Drag and drop
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadArea.classList.add('drag-over');
+            });
+
+            uploadArea.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('drag-over');
+            });
+
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('drag-over');
+                
+                const files = Array.from(e.dataTransfer.files);
+                addFiles(files);
+            });
+
+            // Check server health on load
+            if (serverUrl) {
+                checkServerHealth();
+            }
+        });
+
+        function handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            addFiles(files);
+        }
+
+        function addFiles(files) {
+            files.forEach(file => {
+                if (file.size > 100 * 1024 * 1024) {
+                    showStatus('File too large: ' + file.name + ' (Max: 100MB)', 'error');
+                    return;
+                }
+
+                const existingIndex = selectedFiles.findIndex(f => f.name === file.name);
+                if (existingIndex !== -1) {
+                    selectedFiles[existingIndex] = file;
+                } else {
+                    selectedFiles.push(file);
+                }
+            });
+
+            updateFileList();
+            updateProcessButton();
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updateFileList();
+            updateProcessButton();
+        }
+
+        function updateFileList() {
+            const fileList = document.getElementById('fileList');
+            
+            if (selectedFiles.length === 0) {
+                fileList.innerHTML = '';
+                return;
+            }
+
+            fileList.innerHTML = selectedFiles.map((file, index) => `
+                <div class="file-item">
+                    <div class="file-info">
+                        <i class="fas ${getFileIcon(file.type)} file-icon"></i>
+                        <span>${file.name}</span>
+                        <small>(${formatFileSize(file.size)})</small>
+                    </div>
+                    <div class="remove-file" onclick="removeFile(${index})">
+                        <i class="fas fa-times"></i>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getFileIcon(fileType) {
+            if (fileType.startsWith('image/')) return 'fa-image';
+            if (fileType.includes('pdf')) return 'fa-file-pdf';
+            if (fileType.startsWith('text/')) return 'fa-file-alt';
+            return 'fa-file';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function updateProcessButton() {
+            const button = document.getElementById('processButton');
+            const hasFiles = selectedFiles.length > 0;
+            const hasServer = serverUrl.trim() !== '';
+            
+            button.disabled = !hasFiles || !hasServer;
+            
+            if (!hasServer) {
+                button.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Please set server URL';
+            } else if (!hasFiles) {
+                button.innerHTML = '<i class="fas fa-upload"></i> Select files to process';
+            } else {
+                button.innerHTML = `<i class="fas fa-play"></i> Process ${selectedFiles.length} file${selectedFiles.length === 1 ? '' : 's'}`;
+            }
+        }
+
+        async function checkServerHealth() {
+            if (!serverUrl) return;
+
+            try {
+                const response = await fetch(`${serverUrl}/health`);
+                if (response.ok) {
+                    showStatus('Server connection successful', 'success');
+                } else {
+                    showStatus('Server responded with error', 'error');
+                }
+            } catch (error) {
+                showStatus('Cannot connect to server. Please check the URL.', 'error');
+            }
+        }
+
+        async function processFiles() {
+            if (!serverUrl.trim()) {
+                showStatus('Please enter your backend server URL', 'error');
+                return;
+            }
+
+            if (selectedFiles.length === 0) {
+                showStatus('Please select files to process', 'error');
+                return;
+            }
+
+            const button = document.getElementById('processButton');
+            const progressSection = document.getElementById('progressSection');
+            const downloadSection = document.getElementById('downloadSection');
+
+            // Show progress
+            progressSection.style.display = 'block';
+            downloadSection.style.display = 'none';
+            button.disabled = true;
+            button.innerHTML = '<div class="spinner"></div>Processing...';
+
+            try {
+                // Get form data
+                const outputFormat = document.querySelector('input[name="outputFormat"]:checked').value;
+                const imageFormat = document.querySelector('input[name="imageFormat"]:checked').value;
+                const enableCompression = document.getElementById('enableCompression').checked;
+                const compressionSize = document.getElementById('compressionSize').value;
+                const compressionUnit = document.getElementById('compressionUnit').value;
+
+                // Convert files to base64
+                const filesData = await Promise.all(
+                    selectedFiles.map(async file => {
+                        const base64 = await fileToBase64(file);
+                        return {
+                            name: file.name,
+                            type: file.type,
+                            size: file.size,
+                            data: base64
+                        };
+                    })
+                );
+
+                // Prepare request data
+                const requestData = {
+                    files: filesData,
+                    outputFormat,
+                    imageFormat,
+                    compression: enableCompression ? {
+                        enabled: true,
+                        size: compressionSize,
+                        unit: compressionUnit
+                    } : { enabled: false }
+                };
+
+                // Make request
+                updateProgress(50, 'Processing files...');
+                
+                const response = await fetch(`${serverUrl}/process-files`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Processing failed');
+                }
+
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.error || 'Processing failed');
+                }
+
+                updateProgress(100, 'Processing complete!');
+                showDownload(result);
+                showStatus('Files processed successfully!', 'success');
+
+            } catch (error) {
+                console.error('Processing error:', error);
+                showStatus('Error: ' + error.message, 'error');
+            } finally {
+                button.disabled = false;
+                updateProcessButton();
+            }
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => {
+                    const base64 = reader.result.split(',')[1];
+                    resolve(base64);
+                };
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        function updateProgress(percentage, message) {
+            const progressFill = document.getElementById('progressFill');
+            const statusMessage = document.getElementById('statusMessage');
+            
+            progressFill.style.width = percentage + '%';
+            
+            if (message) {
+                statusMessage.innerHTML = `<div class="status-message">${message}</div>`;
+            }
+        }
+
+        function showStatus(message, type) {
+            const statusMessage = document.getElementById('statusMessage');
+            statusMessage.innerHTML = `<div class="status-message status-${type}">${message}</div>`;
+        }
+
+        function showDownload(result) {
+            const downloadSection = document.getElementById('downloadSection');
+            const downloadButton = document.getElementById('downloadButton');
+            const statsSection = document.getElementById('statsSection');
+
+            // Create download blob
+            const binaryString = atob(result.file.data);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            const blob = new Blob([bytes], { type: result.file.contentType });
+            
+            // Create download URL
+            const url = URL.createObjectURL(blob);
+            downloadButton.href = url;
+            downloadButton.download = result.file.filename;
+
+            // Show stats
+            statsSection.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-value">${formatFileSize(result.file.size)}</div>
+                    <div class="stat-label">Final Size</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${result.compressionRatio}</div>
+                    <div class="stat-label">Ratio</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${Math.round(result.processingTime / 1000)}s</div>
+                    <div class="stat-label">Time</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${selectedFiles.length}</div>
+                    <div class="stat-label">Files</div>
+                </div>
+            `;
+
+            downloadSection.style.display = 'block';
+        }
+
+        // Update process button on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(updateProcessButton, 100);
+        });
+    </script>
+</body>
+</html>
